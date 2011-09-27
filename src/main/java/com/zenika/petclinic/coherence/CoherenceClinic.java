@@ -1,9 +1,10 @@
 package com.zenika.petclinic.coherence;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
+import org.apache.commons.lang.math.RandomUtils;
 import org.springframework.dao.DataAccessException;
 import org.springframework.samples.petclinic.Clinic;
 import org.springframework.samples.petclinic.Owner;
@@ -20,75 +21,99 @@ import com.tangosol.net.NamedCache;
  *
  */
 public class CoherenceClinic implements Clinic {
-	private Clinic jdbcClinic;
 
-	public void setJdbcClinic(Clinic jdbcClinic) {
-		this.jdbcClinic = jdbcClinic;
-	}
 	public Collection<Vet> getVets() throws DataAccessException {
-		return jdbcClinic.getVets();
+		return getVetsCache().values();
 	}
 
 	public Collection<PetType> getPetTypes() throws DataAccessException {
-		return jdbcClinic.getPetTypes();
+		return getPetTypesCache().values();
 	}
 
 	public Collection<Owner> findOwners(String lastName) throws DataAccessException {
-		// load from the database and cache all matching results
-		Collection<Owner> owners = jdbcClinic.findOwners(lastName);
+		Collection<Owner> owners = getOwnersCache().values();
+		String lowerCasedLastName = lastName.toLowerCase();
 
-		// inserts are batched to improve performance
-		Map<Integer, Owner> ownersMap = new HashMap<Integer, Owner>();
+		List<Owner> result = new ArrayList<Owner>();
 		for (Owner owner : owners) {
-			ownersMap.put(owner.getId(), owner);
+			if (owner.getLastName().toLowerCase().startsWith(lowerCasedLastName)) {
+				result.add(owner);
+			}
 		}
-		getOwnersCache().putAll(ownersMap);
-
-		return owners;
+		return result;
 	}
 
 	public Owner loadOwner(int id) throws DataAccessException {
-		// search in the cache by key
-		Owner owner = (Owner) getOwnersCache().get(id);
-		if (owner == null) {
-			// if not in cache, try to load from the database
-			owner = jdbcClinic.loadOwner(id);
-			if (owner != null) {
-				// cache it
-				getOwnersCache().put(id, owner);
-			}
-		}
-		return owner;
+		return (Owner) getOwnersCache().get(id);
 	}
 
 	public Pet loadPet(int id) throws DataAccessException {
-		return jdbcClinic.loadPet(id);
+		Collection<Owner> owners = getOwnersCache().values();
+		for (Owner owner : owners) {
+			for (Pet pet : owner.getPets()) {
+				if (pet.getId().equals(id)) {
+					return pet;
+				}
+			}
+		}
+		return null;
 	}
 
 	public void storeOwner(Owner owner) throws DataAccessException {
-		// store the owner in database to maintain consistency as we don't yet cache everything
-		// we also still rely on this call to generate the owner's id
-		jdbcClinic.storeOwner(owner);
-
-		// put the owner in the cache
+		if (owner.getId() == null) {
+			owner.setId(RandomUtils.nextInt());
+		}
 		getOwnersCache().put(owner.getId(), owner);
 	}
 
+	// FIXME not transactional !!!
 	public void storePet(Pet pet) throws DataAccessException {
-		jdbcClinic.storePet(pet);
-		getOwnersCache().remove(pet.getOwner().getId());
+		Owner owner = (Owner) getOwnersCache().get(pet.getOwner().getId());
+
+		if (owner == null) {
+			throw new IllegalStateException("Owner with id: " + pet.getOwner().getId() + " not found");
+		}
+
+		if (pet.getId() == null) {
+			pet.setId(RandomUtils.nextInt());
+			owner.addPet(pet);
+		} else {
+			Pet existingPet = owner.getPet(pet.getName());
+			existingPet.setBirthDate(pet.getBirthDate());
+			existingPet.setName(pet.getName());
+			existingPet.setType(pet.getType());
+		}
+		getOwnersCache().put(owner.getId(), owner);
 	}
 
 	public void storeVisit(Visit visit) throws DataAccessException {
-		jdbcClinic.storeVisit(visit);
-		getOwnersCache().remove(visit.getPet().getOwner().getId());
+		for (Owner owner : (Collection<Owner>) getOwnersCache().values()) {
+			for (Pet pet : owner.getPets()) {
+				if (pet.getId().equals(visit.getPet().getId())) {
+					if (visit.getId() == null) {
+						visit.setId(RandomUtils.nextInt());
+					}
+					pet.addVisit(visit);
+					getOwnersCache().put(owner.getId(), owner);
+					break;
+				}
+			}
+		}
 	}
 
 	public void deletePet(int id) throws DataAccessException {
-		jdbcClinic.deletePet(id);
+		throw new UnsupportedOperationException("Pet with id " + id + " is not allowed to die");
 	}
 
 	private NamedCache getOwnersCache() {
-		return CacheFactory.getCache("example-distributed");
+		return CacheFactory.getCache("owner-cache");
+	}
+
+	private NamedCache getPetTypesCache() {
+		return CacheFactory.getCache("pet-types-cache");
+	}
+
+	private NamedCache getVetsCache() {
+		return CacheFactory.getCache("vet-cache");
 	}
 }

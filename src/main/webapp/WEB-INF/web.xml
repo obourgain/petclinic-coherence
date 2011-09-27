@@ -185,4 +185,8 @@
 	</resource-ref>
 	-->
 	
+	<listener>
+		<listener-class>com.zenika.petclinic.coherence.DataInitializer</listener-class>
+	</listener>
+	
 </web-app>

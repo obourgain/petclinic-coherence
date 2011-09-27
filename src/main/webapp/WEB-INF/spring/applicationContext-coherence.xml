@@ -55,12 +55,7 @@
 	-->
 	<context:mbean-export/>
 
-	<!-- PetClinic's central data access object using Spring's SimpleJdbcTemplate -->
-	<bean id="jdbcClinic" class="org.springframework.samples.petclinic.jdbc.SimpleJdbcClinic"/>
-
-    <bean id="clinic" class="com.zenika.petclinic.coherence.CoherenceClinic">
-        <property name="jdbcClinic" ref="jdbcClinic" />
-    </bean>
+	<bean id="clinic" class="com.zenika.petclinic.coherence.CoherenceClinic" />
 
 	<!-- Call monitoring aspect that monitors call count and call invocation time -->
 	<bean id="callMonitor" class="org.springframework.samples.petclinic.aspects.CallMonitoringAspect"/>
