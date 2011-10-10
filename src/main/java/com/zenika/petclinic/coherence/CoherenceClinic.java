@@ -3,6 +3,8 @@ package com.zenika.petclinic.coherence;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.lang.math.RandomUtils;
 import org.springframework.dao.DataAccessException;
@@ -15,6 +17,9 @@ import org.springframework.samples.petclinic.Visit;
 
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
+import com.tangosol.util.Filter;
+import com.tangosol.util.filter.LikeFilter;
+import com.tangosol.util.filter.LimitFilter;
 
 /**
  * @author olivier
@@ -31,14 +36,12 @@ public class CoherenceClinic implements Clinic {
 	}
 
 	public Collection<Owner> findOwners(String lastName) throws DataAccessException {
-		Collection<Owner> owners = getOwnersCache().values();
-		String lowerCasedLastName = lastName.toLowerCase();
-
+		Filter lastNameFilter = new LikeFilter("getLastName", lastName + "%", '\\', true);
+		Filter limitFilter = new LimitFilter(lastNameFilter, 30);
+		Set<Entry<Integer, Owner>> entrySet = getOwnersCache().entrySet(limitFilter);
 		List<Owner> result = new ArrayList<Owner>();
-		for (Owner owner : owners) {
-			if (owner.getLastName().toLowerCase().startsWith(lowerCasedLastName)) {
-				result.add(owner);
-			}
+		for (Entry<Integer, Owner> entry : entrySet) {
+			result.add(entry.getValue());
 		}
 		return result;
 	}
