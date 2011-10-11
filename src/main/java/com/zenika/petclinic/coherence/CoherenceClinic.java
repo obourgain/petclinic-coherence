@@ -22,8 +22,8 @@ import com.tangosol.util.filter.LikeFilter;
 import com.tangosol.util.filter.LimitFilter;
 
 /**
- * @author olivier
- *
+ * @author Olivier Bourgain
+ * @author Guillaume Tinon
  */
 public class CoherenceClinic implements Clinic {
 
