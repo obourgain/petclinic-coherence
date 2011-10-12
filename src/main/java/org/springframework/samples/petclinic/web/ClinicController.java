@@ -1,9 +1,17 @@
 
 package org.springframework.samples.petclinic.web;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.samples.petclinic.Clinic;
+import org.springframework.samples.petclinic.Owner;
+import org.springframework.samples.petclinic.Pet;
 import org.springframework.samples.petclinic.Vets;
+import org.springframework.samples.petclinic.Visit;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -69,7 +77,14 @@ public class ClinicController {
 	@RequestMapping("/owners/{ownerId}")
 	public ModelAndView ownerHandler(@PathVariable("ownerId") int ownerId) {
 		ModelAndView mav = new ModelAndView("owners/show");
-		mav.addObject(this.clinic.loadOwner(ownerId));
+		Owner owner = this.clinic.loadOwner(ownerId);
+		mav.addObject(owner);
+		Map<Integer, List<Visit>> visitsByPetId = new HashMap<Integer, List<Visit>>();
+		for (Pet pet : owner.getPets()) {
+			List<Visit> visitsForPet = new ArrayList<Visit>(this.clinic.loadVisitsForPet(pet.getId()));
+			visitsByPetId.put(pet.getId(), visitsForPet);
+		}
+		mav.addObject("visits", visitsByPetId);
 		return mav;
 	}
 
@@ -82,7 +97,8 @@ public class ClinicController {
 	@RequestMapping(value="/owners/*/pets/{petId}/visits", method=RequestMethod.GET)
 	public ModelAndView visitsHandler(@PathVariable int petId) {
 		ModelAndView mav = new ModelAndView("visits");
-		mav.addObject("visits", this.clinic.loadPet(petId).getVisits());
+		mav.addObject("visits", new ArrayList(this.clinic.loadVisitsForPet(petId)));
+		mav.addObject("pet", this.clinic.loadPet(petId));
 		return mav;
 	}
 

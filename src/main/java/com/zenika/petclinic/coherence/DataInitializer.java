@@ -25,6 +25,7 @@ public class DataInitializer implements ServletContextListener {
 	NamedCache petTypeCache = CacheFactory.getCache("pet-types-cache");
 	NamedCache vetCache = CacheFactory.getCache("vet-cache");
 	NamedCache ownerCache = CacheFactory.getCache("owner-cache");
+	NamedCache visitCache = CacheFactory.getCache("visit-cache");
 
 	@SuppressWarnings("deprecation")
 	public void contextInitialized(ServletContextEvent sce) {
@@ -131,7 +132,8 @@ public class DataInitializer implements ServletContextListener {
 		for (Owner owner : (Collection<Owner>) ownerCache.values()) {
 			for (Pet pet : owner.getPets()) {
 				if (pet.getId() == petId) {
-					pet.addVisit(visit);
+					visit.setPetId(pet.getId());
+					visitCache.put(visit.getId(), visit);
 					ownerCache.put(owner.getId(), owner);
 					break;
 				}

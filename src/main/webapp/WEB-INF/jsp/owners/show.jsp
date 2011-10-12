@@ -66,7 +66,7 @@
               <th>Visit Date</th>
               <th>Description</th>
             </thead>
-            <c:forEach var="visit" items="${pet.visits}">
+            <c:forEach var="visit" items="${visits[pet.id]}">
               <tr>
                 <td><fmt:formatDate value="${visit.date}" pattern="yyyy-MM-dd"/></td>
                 <td>${visit.description}</td>

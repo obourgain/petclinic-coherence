@@ -1,6 +1,8 @@
 
 package org.springframework.samples.petclinic.web;
 
+import java.util.ArrayList;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.samples.petclinic.Clinic;
 import org.springframework.samples.petclinic.Pet;
@@ -46,10 +48,13 @@ public class AddVisitForm {
 
 	@RequestMapping(method = RequestMethod.GET)
 	public String setupForm(@PathVariable("petId") int petId, Model model) {
-		Pet pet = this.clinic.loadPet(petId);
 		Visit visit = new Visit();
-		pet.addVisit(visit);
+		visit.setPetId(petId);
+		Pet pet = clinic.loadPet(petId);
+		ArrayList<Visit> visits = new ArrayList<Visit>(clinic.loadVisitsForPet(petId));
 		model.addAttribute("visit", visit);
+		model.addAttribute("pet", pet);
+		model.addAttribute("visits", visits);
 		return "pets/visitForm";
 	}
 
@@ -62,7 +67,9 @@ public class AddVisitForm {
 		else {
 			this.clinic.storeVisit(visit);
 			status.setComplete();
-			return "redirect:/owners/" + visit.getPet().getOwner().getId();
+
+			Pet pet = clinic.loadPet(visit.getPetId());
+			return "redirect:/owners/" + pet.getOwner().getId();
 		}
 	}
 

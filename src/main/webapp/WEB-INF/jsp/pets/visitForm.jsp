@@ -13,10 +13,10 @@
       <th>Owner</th>
     </thead>
     <tr>
-      <td>${visit.pet.name}</td>
-      <td><fmt:formatDate value="${visit.pet.birthDate}" pattern="yyyy-MM-dd"/></td>
-      <td>${visit.pet.type.name}</td>
-      <td>${visit.pet.owner.firstName} ${visit.pet.owner.lastName}</td>
+      <td>${pet.name}</td>
+      <td><fmt:formatDate value="${pet.birthDate}" pattern="yyyy-MM-dd"/></td>
+      <td>${pet.type.name}</td>
+      <td>${pet.owner.firstName} ${pet.owner.lastName}</td>
     </tr>
   </table>
 
@@ -41,7 +41,7 @@
     </tr>
     <tr>
       <td colspan="2">
-        <input type="hidden" name="petId" value="${visit.pet.id}"/>
+        <input type="hidden" name="petId" value="${pet.id}"/>
         <p class="submit"><input type="submit" value="Add Visit"/></p>
       </td>
     </tr>
@@ -55,7 +55,7 @@
     <th>Date</th>
     <th>Description</th>
   </tr>
-  <c:forEach var="visit" items="${visit.pet.visits}">
+  <c:forEach var="visit" items="${visits}">
     <c:if test="${!visit.new}">
       <tr>
         <td><fmt:formatDate value="${visit.date}" pattern="yyyy-MM-dd"/></td>

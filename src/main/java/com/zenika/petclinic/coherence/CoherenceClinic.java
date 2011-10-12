@@ -90,18 +90,11 @@ public class CoherenceClinic implements Clinic {
 	}
 
 	public void storeVisit(Visit visit) throws DataAccessException {
-		for (Owner owner : (Collection<Owner>) getOwnersCache().values()) {
-			for (Pet pet : owner.getPets()) {
-				if (pet.getId().equals(visit.getPet().getId())) {
-					if (visit.getId() == null) {
-						visit.setId(RandomUtils.nextInt());
-					}
-					pet.addVisit(visit);
-					getOwnersCache().put(owner.getId(), owner);
-					break;
-				}
-			}
+		if (visit.getId() == null) {
+			visit.setId(RandomUtils.nextInt());
 		}
+
+		getVisitsCache().put(visit.getId(), visit);
 	}
 
 	public void deletePet(int id) throws DataAccessException {
@@ -118,5 +111,9 @@ public class CoherenceClinic implements Clinic {
 
 	private NamedCache getVetsCache() {
 		return CacheFactory.getCache("vet-cache");
+	}
+
+	private NamedCache getVisitsCache() {
+		return CacheFactory.getCache("visit-cache");
 	}
 }

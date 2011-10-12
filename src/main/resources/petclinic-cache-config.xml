@@ -44,5 +44,10 @@
 			<cache-name>owner-cache</cache-name>
 			<scheme-name>distributed-scheme</scheme-name>
 		</cache-mapping>
+
+		<cache-mapping>
+			<cache-name>visit-cache</cache-name>
+			<scheme-name>distributed-scheme</scheme-name>
+		</cache-mapping>
 	</caching-scheme-mapping>
 </cache-config>
