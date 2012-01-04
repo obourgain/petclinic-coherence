@@ -1,6 +1,7 @@
 package org.springframework.samples.petclinic;
 
 import java.util.Collection;
+import java.util.Set;
 
 import org.springframework.dao.DataAccessException;
 
@@ -52,6 +53,8 @@ public interface Clinic {
 	 * @throws org.springframework.dao.DataRetrievalFailureException if not found
 	 */
 	Pet loadPet(int id) throws DataAccessException;
+
+	Set<Visit> loadVisitsForPet(int petId) throws DataAccessException;
 
 	/**
 	 * Save an <code>Owner</code> to the data store, either inserting or updating it.

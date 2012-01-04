@@ -2,6 +2,7 @@ package com.zenika.petclinic.coherence;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -18,6 +19,10 @@ import org.springframework.samples.petclinic.Visit;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
 import com.tangosol.util.Filter;
+import com.tangosol.util.ValueExtractor;
+import com.tangosol.util.extractor.ReflectionExtractor;
+import com.tangosol.util.filter.ContainsFilter;
+import com.tangosol.util.filter.EqualsFilter;
 import com.tangosol.util.filter.LikeFilter;
 import com.tangosol.util.filter.LimitFilter;
 
@@ -36,7 +41,7 @@ public class CoherenceClinic implements Clinic {
 	}
 
 	public Collection<Owner> findOwners(String lastName) throws DataAccessException {
-		Filter lastNameFilter = new LikeFilter("getLastName", lastName + "%", '\\', true);
+		Filter lastNameFilter = new LikeFilter(new ReflectionExtractor("getLastName"), lastName + "%", '\\', true);
 		Filter limitFilter = new LimitFilter(lastNameFilter, 30);
 		Set<Entry<Integer, Owner>> entrySet = getOwnersCache().entrySet(limitFilter);
 		List<Owner> result = new ArrayList<Owner>();
@@ -51,12 +56,20 @@ public class CoherenceClinic implements Clinic {
 	}
 
 	public Pet loadPet(int id) throws DataAccessException {
-		Collection<Owner> owners = getOwnersCache().values();
-		for (Owner owner : owners) {
-			for (Pet pet : owner.getPets()) {
-				if (pet.getId().equals(id)) {
-					return pet;
-				}
+		ContainsFilter filter = new ContainsFilter(new PetIdsExtractor(), id);
+
+		// there should be at most one owner matching the filter
+		Set<Entry<Integer, Owner>> entries = getOwnersCache().entrySet(filter);
+
+		if (entries.isEmpty()) {
+			return null;
+		}
+
+		Entry<Integer, Owner> entry = entries.iterator().next();
+		Owner owner = entry.getValue();
+		for (Pet pet : owner.getPets()) {
+			if (pet.getId().equals(id)) {
+				return pet;
 			}
 		}
 		return null;
@@ -115,5 +128,18 @@ public class CoherenceClinic implements Clinic {
 
 	private NamedCache getVisitsCache() {
 		return CacheFactory.getCache("visit-cache");
+	}
+
+	public Set<Visit> loadVisitsForPet(int petId) throws DataAccessException {
+		ValueExtractor extractor = new PetIdFromVisitExtractor();
+		Filter filter = new EqualsFilter(extractor, petId);
+
+		// no method values(filter), so we have to iterate on entry.getValue() to build the result :/
+		Set<Entry<Integer, Visit>> visits = getVisitsCache().entrySet(filter);
+		Set<Visit> result = new HashSet<Visit>();
+		for (Entry<Integer, Visit> entry : visits) {
+			result.add(entry.getValue());
+		}
+		return result;
 	}
 }
