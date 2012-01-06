@@ -15,6 +15,11 @@ import org.springframework.samples.petclinic.Visit;
 
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
+import com.tangosol.util.Filter;
+import com.tangosol.util.ValueExtractor;
+import com.tangosol.util.extractor.ConditionalExtractor;
+import com.tangosol.util.extractor.ReflectionExtractor;
+import com.tangosol.util.filter.NotEqualsFilter;
 
 /**
  * @author olivier
@@ -72,6 +77,8 @@ public class DataInitializer implements ServletContextListener {
 		buildVisitAndAddToOwner(2, 8, new Date(96, 3, 4), "rabies shot");
 		buildVisitAndAddToOwner(3, 8, new Date(96, 6, 4), "neutered");
 		buildVisitAndAddToOwner(4, 7, new Date(96, 9, 4), "spayed");
+
+		initializeIndices();
 	}
 
 	public void contextDestroyed(ServletContextEvent sce) {
@@ -139,6 +146,16 @@ public class DataInitializer implements ServletContextListener {
 				}
 			}
 		}
+	}
+
+	private void initializeIndices() {
+		ownerCache.addIndex(new PetIdsExtractor(), false, null);
+		visitCache.addIndex(new PetIdFromVisitExtractor(), false, null);
+
+		ValueExtractor extractor = new ReflectionExtractor("getAddress");
+		Filter filter = new NotEqualsFilter("getAddress", null);
+		ConditionalExtractor conditionalExtractor = new ConditionalExtractor(filter, extractor, false);
+		ownerCache.addIndex(conditionalExtractor, false, null);
 	}
 
 }
