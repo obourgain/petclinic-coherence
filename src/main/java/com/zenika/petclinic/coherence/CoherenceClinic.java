@@ -2,7 +2,6 @@ package com.zenika.petclinic.coherence;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.ConcurrentModificationException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
@@ -14,18 +13,22 @@ import org.springframework.samples.petclinic.Clinic;
 import org.springframework.samples.petclinic.Owner;
 import org.springframework.samples.petclinic.Pet;
 import org.springframework.samples.petclinic.PetType;
+import org.springframework.samples.petclinic.Specialty;
 import org.springframework.samples.petclinic.Vet;
 import org.springframework.samples.petclinic.Visit;
 
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
 import com.tangosol.util.Filter;
+import com.tangosol.util.InvocableMap;
 import com.tangosol.util.ValueExtractor;
 import com.tangosol.util.extractor.ReflectionExtractor;
+import com.tangosol.util.filter.AlwaysFilter;
 import com.tangosol.util.filter.ContainsFilter;
 import com.tangosol.util.filter.EqualsFilter;
 import com.tangosol.util.filter.LikeFilter;
 import com.tangosol.util.filter.LimitFilter;
+import com.tangosol.util.processor.AbstractProcessor;
 
 /**
  * @author Olivier Bourgain
@@ -84,30 +87,7 @@ public class CoherenceClinic implements Clinic {
 	}
 
 	public void storePet(Pet pet) throws DataAccessException {
-		try {
-			boolean lock = getOwnersCache().lock(pet.getOwner().getId());
-			if (!lock) {
-				throw new ConcurrentModificationException();
-			}
-			Owner owner = (Owner) getOwnersCache().get(pet.getOwner().getId());
-
-			if (owner == null) {
-				throw new IllegalStateException("Owner with id: " + pet.getOwner().getId() + " not found");
-			}
-
-			if (pet.getId() == null) {
-				pet.setId(RandomUtils.nextInt());
-				owner.addPet(pet);
-			} else {
-				Pet existingPet = owner.getPet(pet.getName());
-				existingPet.setBirthDate(pet.getBirthDate());
-				existingPet.setName(pet.getName());
-				existingPet.setType(pet.getType());
-			}
-			getOwnersCache().put(owner.getId(), owner);
-		} finally {
-			getOwnersCache().unlock(pet.getOwner().getId());
-		}
+		getOwnersCache().invoke(pet.getOwner().getId(), new StorePetProcessor(pet));
 	}
 
 	public void storeVisit(Visit visit) throws DataAccessException {
@@ -134,7 +114,28 @@ public class CoherenceClinic implements Clinic {
 		return CacheFactory.getCache("vet-cache");
 	}
 
+	public class AddSpecialtyToVetsProcessor extends AbstractProcessor {
+
+		private Specialty specialty;
+
+		public AddSpecialtyToVetsProcessor(Specialty specialty) {
+			this.specialty = specialty;
+		}
+
+		public Object process(InvocableMap.Entry entry) {
+			Vet vet = (Vet) entry.getValue();
+			if (vet.getSpecialties().contains(specialty)) {
+				return false;
+			}
+			vet.addSpecialty(specialty);
+			return true;
+		}
+	}
+
 	private NamedCache getVisitsCache() {
+		Specialty specialty = new Specialty();
+		specialty.setName("radiology");
+		getVetsCache().invokeAll(AlwaysFilter.INSTANCE, new AddSpecialtyToVetsProcessor(specialty));
 		return CacheFactory.getCache("visit-cache");
 	}
 
