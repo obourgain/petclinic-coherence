@@ -2,6 +2,7 @@ package com.zenika.petclinic.coherence;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.ConcurrentModificationException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
@@ -82,24 +83,31 @@ public class CoherenceClinic implements Clinic {
 		getOwnersCache().put(owner.getId(), owner);
 	}
 
-	// FIXME not transactional !!!
 	public void storePet(Pet pet) throws DataAccessException {
-		Owner owner = (Owner) getOwnersCache().get(pet.getOwner().getId());
+		try {
+			boolean lock = getOwnersCache().lock(pet.getOwner().getId());
+			if (!lock) {
+				throw new ConcurrentModificationException();
+			}
+			Owner owner = (Owner) getOwnersCache().get(pet.getOwner().getId());
 
-		if (owner == null) {
-			throw new IllegalStateException("Owner with id: " + pet.getOwner().getId() + " not found");
-		}
+			if (owner == null) {
+				throw new IllegalStateException("Owner with id: " + pet.getOwner().getId() + " not found");
+			}
 
-		if (pet.getId() == null) {
-			pet.setId(RandomUtils.nextInt());
-			owner.addPet(pet);
-		} else {
-			Pet existingPet = owner.getPet(pet.getName());
-			existingPet.setBirthDate(pet.getBirthDate());
-			existingPet.setName(pet.getName());
-			existingPet.setType(pet.getType());
+			if (pet.getId() == null) {
+				pet.setId(RandomUtils.nextInt());
+				owner.addPet(pet);
+			} else {
+				Pet existingPet = owner.getPet(pet.getName());
+				existingPet.setBirthDate(pet.getBirthDate());
+				existingPet.setName(pet.getName());
+				existingPet.setType(pet.getType());
+			}
+			getOwnersCache().put(owner.getId(), owner);
+		} finally {
+			getOwnersCache().unlock(pet.getOwner().getId());
 		}
-		getOwnersCache().put(owner.getId(), owner);
 	}
 
 	public void storeVisit(Visit visit) throws DataAccessException {
