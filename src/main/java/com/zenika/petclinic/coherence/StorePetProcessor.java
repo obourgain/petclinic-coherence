@@ -20,7 +20,7 @@ public class StorePetProcessor extends AbstractProcessor {
 
 	public Object process(Entry entry) {
 		Owner owner = (Owner) entry.getValue();
-		
+
 		if (pet.getId() == null) {
 			pet.setId(RandomUtils.nextInt());
 			owner.addPet(pet);

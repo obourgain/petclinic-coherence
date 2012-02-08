@@ -13,22 +13,18 @@ import org.springframework.samples.petclinic.Clinic;
 import org.springframework.samples.petclinic.Owner;
 import org.springframework.samples.petclinic.Pet;
 import org.springframework.samples.petclinic.PetType;
-import org.springframework.samples.petclinic.Specialty;
 import org.springframework.samples.petclinic.Vet;
 import org.springframework.samples.petclinic.Visit;
 
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
 import com.tangosol.util.Filter;
-import com.tangosol.util.InvocableMap;
 import com.tangosol.util.ValueExtractor;
 import com.tangosol.util.extractor.ReflectionExtractor;
-import com.tangosol.util.filter.AlwaysFilter;
 import com.tangosol.util.filter.ContainsFilter;
 import com.tangosol.util.filter.EqualsFilter;
 import com.tangosol.util.filter.LikeFilter;
 import com.tangosol.util.filter.LimitFilter;
-import com.tangosol.util.processor.AbstractProcessor;
 
 /**
  * @author Olivier Bourgain
@@ -114,28 +110,7 @@ public class CoherenceClinic implements Clinic {
 		return CacheFactory.getCache("vet-cache");
 	}
 
-	public class AddSpecialtyToVetsProcessor extends AbstractProcessor {
-
-		private Specialty specialty;
-
-		public AddSpecialtyToVetsProcessor(Specialty specialty) {
-			this.specialty = specialty;
-		}
-
-		public Object process(InvocableMap.Entry entry) {
-			Vet vet = (Vet) entry.getValue();
-			if (vet.getSpecialties().contains(specialty)) {
-				return false;
-			}
-			vet.addSpecialty(specialty);
-			return true;
-		}
-	}
-
 	private NamedCache getVisitsCache() {
-		Specialty specialty = new Specialty();
-		specialty.setName("radiology");
-		getVetsCache().invokeAll(AlwaysFilter.INSTANCE, new AddSpecialtyToVetsProcessor(specialty));
 		return CacheFactory.getCache("visit-cache");
 	}
 
